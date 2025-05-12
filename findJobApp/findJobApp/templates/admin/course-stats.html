@@ -1,0 +1,91 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+<h1>Thống Kê Báo Cáo findJobApp</h1>
+
+<h2>Số Lượng Công Việc Theo Trạng Thái</h2>
+<ul>
+    {% for stat in job_stats %}
+    <li>{{ stat.status }}: {{ stat.count }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Số Lượng Ứng Tuyển Theo Ngày</h2>
+<ul>
+    {% for stat in application_stats %}
+    <li>{{ stat.applied_date__date }}: {{ stat.count }}</li>
+    {% endfor %}
+</ul>
+
+<div style="width: 50%;">
+    <canvas id="jobStatusChart"></canvas>
+</div>
+<div style="width: 50%; margin-top: 20px;">
+    <canvas id="applicationDateChart"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Dữ liệu cho biểu đồ trạng thái công việc
+    let jobData = [];
+    let jobLabels = [];
+    {% for stat in job_stats %}
+        jobData.push({{ stat.count }});
+        jobLabels.push('{{ stat.status }}');
+    {% endfor %}
+
+    // Dữ liệu cho biểu đồ ứng tuyển theo ngày
+    let applicationData = [];
+    let applicationLabels = [];
+    {% for stat in application_stats %}
+        applicationData.push({{ stat.count }});
+        applicationLabels.push('{{ stat.applied_date__date }}');
+    {% endfor %}
+
+    window.onload = function() {
+        // Biểu đồ trạng thái công việc
+        const jobCtx = document.getElementById('jobStatusChart').getContext('2d');
+        new Chart(jobCtx, {
+            type: 'pie',
+            data: {
+                labels: jobLabels,
+                datasets: [{
+                    label: 'Số Lượng Công Việc',
+                    data: jobData,
+                    borderWidth: 1,
+                    backgroundColor: ['red', 'green', 'blue', 'yellow']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // Biểu đồ ứng tuyển theo ngày
+        const appCtx = document.getElementById('applicationDateChart').getContext('2d');
+        new Chart(appCtx, {
+            type: 'line',
+            data: {
+                labels: applicationLabels,
+                datasets: [{
+                    label: 'Số Lượng Ứng Tuyển',
+                    data: applicationData,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
