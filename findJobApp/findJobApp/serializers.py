@@ -1,10 +1,11 @@
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
-from findJobApp.models import User, Company, Job, Application, WorkSchedule, ChatMessage, Notification
+from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate
+import json
 
 class UserSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'role', 'email_notification']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'email_notification', 'average_rating', 'password']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -12,7 +13,7 @@ class UserSerializer(ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.avatar:
-            data['avatar'] = instance.avatar.url
+            data['avatar'] = instance.avatar
         return data
 
     def create(self, validated_data):
@@ -22,15 +23,15 @@ class UserSerializer(ModelSerializer):
         u.save()
         return u
 
-class CompanySerializer(ModelSerializer):
+class EmployerSerializer(ModelSerializer):
     class Meta:
-        model = Company
-        fields = ['id', 'user', 'name', 'tax_code', 'description', 'images', 'verified', 'location', 'coordinates']
+        model = Employer
+        fields = ['id', 'user', 'name', 'tax_code', 'images', 'verified', 'location', 'coordinates']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if instance.images:
-            data['images'] = instance.images.url
+            data['images'] = instance.images
         if instance.coordinates:
             data['coordinates'] = json.loads(instance.coordinates) if isinstance(instance.coordinates, str) else instance.coordinates
         return data
@@ -38,7 +39,7 @@ class CompanySerializer(ModelSerializer):
 class JobSerializer(ModelSerializer):
     class Meta:
         model = Job
-        fields = ['id', 'company', 'title', 'description', 'skills', 'salary', 'time_work', 'location', 'coordinates', 'status', 'work_hours']
+        fields = ['id', 'employer_id', 'title', 'description', 'skills', 'salary', 'time_work', 'location', 'coordinates', 'status', 'work_hours', 'category_id']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -46,20 +47,25 @@ class JobSerializer(ModelSerializer):
             data['coordinates'] = json.loads(instance.coordinates) if isinstance(instance.coordinates, str) else instance.coordinates
         return data
 
-class ApplicationSerializer(ModelSerializer):
+class ApplySerializer(ModelSerializer):
     class Meta:
-        model = Application
-        fields = ['id', 'user', 'job', 'cv_link', 'status', 'applied_date']
+        model = Apply
+        fields = ['id', 'candidate_id', 'job_id', 'status', 'applied_date']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['candidate'] = UserSerializer(instance.candidate_id.user).data if instance.candidate_id else None
+        return data
 
 class WorkScheduleSerializer(ModelSerializer):
     class Meta:
         model = WorkSchedule
-        fields = ['id', 'user', 'job', 'start_time', 'end_time', 'status']
+        fields = ['id', 'job_id', 'start_time', 'end_time', 'status']
 
 class ChatMessageSerializer(ModelSerializer):
     class Meta:
         model = ChatMessage
-        fields = ['id', 'sender', 'receiver', 'job', 'message', 'is_read', 'created_date']
+        fields = ['id', 'sender', 'receiver', 'message', 'is_read', 'timestamp']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -70,7 +76,7 @@ class ChatMessageSerializer(ModelSerializer):
 class NotificationSerializer(ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'user', 'message', 'notification_type', 'is_read', 'created_date']
+        fields = ['id', 'user', 'notif_type', 'is_read', 'created_date']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

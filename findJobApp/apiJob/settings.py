@@ -28,12 +28,7 @@ SECRET_KEY = 'django-insecure-)6&0idepvr1ofg(-y&7y@4o6)7eq!%m$_nu&n)39viptn_*s%s
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '9c78-2402-800-63a8-ff41-30fc-55bc-b539-ff86.ngrok-free.app',
-    'localhost',
-    '127.0.0.1',
-    'd4ab-2402-800-63a8-ff41-706f-220-ff26-87a7.ngrok-free.app'
-]
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -50,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'oauth2_provider',
+    'corsheaders',
 ]
 
 REST_FRAMEWORK = {
@@ -95,8 +91,9 @@ FIREBASE_CONFIG = {
     'appId': "your-firebase-app-id",
     'databaseURL': "your-firebase-database-url"
 }
-
+CORS_ALLOW_ALL_ORIGINS = True
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
