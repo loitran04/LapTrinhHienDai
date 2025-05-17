@@ -80,8 +80,11 @@ class VerificationAdmin(admin.ModelAdmin):
 class FollowAdmin(admin.ModelAdmin):
     list_display = ['id', 'employer_id', 'candidate_id', 'notify_email']
     search_fields = ['employer_id__name', 'candidate_id__user__username']
-    list_filter = ['notify_email']
 
+    def notify_email(self, obj):
+        return obj.candidate_id.user.email if obj.candidate_id else None
+
+    notify_email.short_description = 'Candidate Email'
 # Admin cho Candidate
 class CandidateAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'cv_link']
