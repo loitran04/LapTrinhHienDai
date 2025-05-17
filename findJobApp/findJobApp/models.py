@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # Định nghĩa các lựa chọn cho enum
 STATUS_APP_CHOICES = [
@@ -19,12 +21,19 @@ STATUS_WORK_CHOICES = [
     ('completed', 'Completed'),
     ('canceled', 'Canceled'),
 ]
+ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('employer', 'Employer'),
+        ('candidate', 'Candidate'),
+]
 
 # Mô hình User (kế thừa từ AbstractUser)
 class User(AbstractUser):
-    avatar = models.CharField(max_length=255, blank=True, null=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     email_notification = models.BooleanField(default=True)
     average_rating = models.FloatField(default=0.0)
+    role = models.CharField(max_length=20,choices=ROLE_CHOICES,default='candidate')
+
 
 # Mô hình Category
 class Category(models.Model):
@@ -39,20 +48,18 @@ class Job(models.Model):
     description = models.TextField()
     skills = models.TextField()
     salary = models.CharField(max_length=50)
-    time_work = models.CharField(max_length=50)
     location = models.CharField(max_length=255)
     coordinates = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_JOB_CHOICES, default='draft')
     work_hours = models.IntegerField()
     employer_id = models.ForeignKey('Employer', on_delete=models.CASCADE)
-    category_id = models.ForeignKey(Category, on_delete=models.CASCADE)
-
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='jobs')
     def __str__(self):
         return self.title
 
 # Mô hình Employer
 class Employer(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employer_profile')
     name = models.CharField(max_length=255)
     tax_code = models.CharField(max_length=50)
     images = models.CharField(max_length=255, blank=True, null=True)
@@ -62,14 +69,19 @@ class Employer(models.Model):
 
     def __str__(self):
         return self.name
-
+class EmployerImage(models.Model):
+    employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='employer_images/')
+    uploaded_at= models.DateTimeField(auto_now_add=True)
 # Mô hình Candidate
 class Candidate(models.Model):
-    cv_link = models.CharField(max_length=255)
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='candidate_profile')
+    name = models.CharField(max_length=255)
+    cv_link = models.CharField(max_length=255, blank=True, null=True)
+
 
     def __str__(self):
-        return self.user.username
+        return self.name
 
 # Mô hình Apply
 class Apply(models.Model):
@@ -98,6 +110,7 @@ class Notification(models.Model):
     notif_type = models.CharField(max_length=50)
     is_read = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_date = models.DateTimeField(auto_now_add=True)
 
 # Mô hình Verification
 class Verification(models.Model):
@@ -119,6 +132,10 @@ class ChatMessage(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sender')
     receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='receiver')
 
-# Mô hình Admin
-class Admin(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+# @receiver(post_save, sender=User)
+# def create_profile_for_role(sender, instance, created, **kwargs):
+#     if created:
+#         if instance.role == 'employer':
+#             Employer.objects.create(user=instance, name=instance.username, tax_code="", location="")
+#         elif instance.role=='candidate':
+#             Candidate.objects.create(user=instance)
