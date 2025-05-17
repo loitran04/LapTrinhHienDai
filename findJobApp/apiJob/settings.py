@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os
 
+from django.conf.global_settings import EMAIL_HOST_USER
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -79,7 +81,7 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_SMTP = 'shopnro247combot@gmail.com'
 EMAIL_SMTP_PASSWORD = 'ilku tthj tfat icjg'
-DEFAULT_FROM_EMAIL = EMAIL_SMTP
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # Google Maps API Key (for tracking work locations)
 GOOGLE_MAPS_API_KEY = 'AIzaSyA8kPXTpPl1Q5CL2e5zcXQpaRl3bTNF2xM'

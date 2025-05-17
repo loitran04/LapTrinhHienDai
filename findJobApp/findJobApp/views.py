@@ -1,14 +1,18 @@
+from django.db.models.functions import Trunc
 from keras.src.optimizers.schedules.learning_rate_schedule import serialize
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets, generics, status, permissions
 from django.core.mail import send_mail
 from django.conf import settings
-from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category
+from sqlalchemy import True_, False_
+
+from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, Follow
 from findJobApp.serializers import UserSerializer, EmployerSerializer, JobSerializer, ApplySerializer, WorkScheduleSerializer, ChatMessageSerializer, NotificationSerializer, CandidateSerializer,EmployerRegisterSerializer,CandidateRegisterSerializer, CategorySerializer
 from django.http import JsonResponse
 import json
-from .perms import IsAdminOrOwner
+from .perms import IsAdminOrOwner, IsEmployerOwner
+
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
@@ -87,6 +91,15 @@ class JobViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         employer = Employer.objects.get(user=self.request.user)
         serializer.save(employer_id=employer)
+        followers = Follow.objects.filter(employer=employer)
+        for f in followers:
+            send_mail(
+                subject='New Job Posted',
+                message=f'Employer {employer.name} has posted a new job: {job.title}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[f.candidate.user.email],
+                fail_silently=True,
+            )
 
     def get_queryset(self): # tìm kiếm theo tên và vị trí và ngành nghề
         query = self.queryset
@@ -119,6 +132,18 @@ class JobViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_200_OK)
         return Response({"message": "No map data available"}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(methods=['get'], url_path='test-email', detail=False)
+    def test_email(self, request):
+        send_mail(
+            subject='Test mail',
+            message='test',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=['tvloi250204@gmail.com'],
+            fail_silently=False
+        )
+        return Response({'message': 'email sent successfully'})
+
+
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -136,11 +161,45 @@ class CandidateViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
 class ApplyViewSet(viewsets.ModelViewSet):
     queryset = Apply.objects.all()
     serializer_class = ApplySerializer
-    permission_classes = [permissions.IsAuthenticated]  # Chỉ người dùng đã đăng nhập
+
+    def get_permissions(self):
+        if self.action in ['approve', 'reject', 'job_applies']:
+            return [permissions.IsAuthenticated(), IsEmployerOwner()]
+        elif self.action in ['list', 'retrieve']:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated()]
 
     def perform_create(self, serializer):
         candidate = Candidate.objects.get(user=self.request.user)
         serializer.save(candidate_id=candidate)
+
+    def get_queryset(self):
+        user = self.request.user
+        if hasattr(user, 'candidate'):
+            return Apply.objects.filer(candidate__user= user)
+        elif hasattr(user, 'employer'):
+            return Apply.objects.filer(job__employer_id__user=user)
+        return Apply.objects.none()
+
+    @action(detail=True, methods=['patch'], url_path='approve')
+    def approve(self, request, pk = None):
+        apply = self.get_object()
+        apply.status = 'approved'
+        apply.save()
+        return Response({'status': 'Approved'})
+
+    @action(detail=True, methods=['patch'], url_path='reject')
+    def reject(self, request, pk=None):
+        apply = self.get_object()
+        apply.status='rejected'
+        apply.save()
+        return Response({'status':'Rejected'})
+
+    @action(detail=False, methods=['get'], url_path='job/(?P<job_id>[^/.]+)')
+    def job_applies(self, request, job_id=None):
+        applies =Apply.objects.filer(job__id = job_id, job__employer_id__user=request.user)
+        serializer=self.get_serializer(applies, many=True)
+        return Response(serializer.data)
 
 class WorkScheduleViewSet(viewsets.ModelViewSet):
     queryset = WorkSchedule.objects.all()

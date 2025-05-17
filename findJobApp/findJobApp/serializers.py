@@ -133,15 +133,18 @@ class JobSerializer(ModelSerializer):
             data['coordinates'] = json.loads(instance.coordinates) if isinstance(instance.coordinates, str) else instance.coordinates
         return data
 
-class ApplySerializer(ModelSerializer):
+class ApplySerializer(serializers.ModelSerializer):
+    candidate = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Apply
-        fields = ['id', 'candidate_id', 'job_id', 'status', 'applied_date']
+        fields = ['id', 'job_id', 'cv_link', 'status', 'applied_date', 'candidate']
+        read_only_fields = ['status', 'applied_date', 'candidate']
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['candidate'] = UserSerializer(instance.candidate_id.user).data if instance.candidate_id else None
-        return data
+    def get_candidate(self, obj):
+        if obj.candidate_id:
+            return UserSerializer(obj.candidate_id.user).data
+        return None
 
 class WorkScheduleSerializer(ModelSerializer):
     class Meta:

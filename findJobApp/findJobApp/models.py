@@ -88,6 +88,7 @@ class Apply(models.Model):
     applied_date = models.DateTimeField(auto_now_add=True)
     job_id = models.ForeignKey(Job, on_delete=models.CASCADE)
     candidate_id = models.ForeignKey(Candidate, on_delete=models.CASCADE)
+    cv_link = models.URLField()
 
 # Mô hình WorkSchedule
 class WorkSchedule(models.Model):
@@ -119,10 +120,12 @@ class Verification(models.Model):
 
 # Mô hình Follow
 class Follow(models.Model):
-    notify_email = models.BooleanField(default=True)
     employer_id = models.ForeignKey(Employer, on_delete=models.CASCADE)
     candidate_id = models.ForeignKey(Candidate, on_delete=models.CASCADE)
+    followed_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        unique_together = ('candidate_id', 'employer_id')
 # Mô hình ChatMessage
 class ChatMessage(models.Model):
     message = models.TextField()
