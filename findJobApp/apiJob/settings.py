@@ -49,12 +49,15 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ('oauth2_provider.contrib.rest_framework.OAuth2Authentication',)
+    'DEFAULT_AUTHENTICATION_CLASSES': ['oauth2_provider.contrib.rest_framework.OAuth2Authentication']
 }
 
-OAUTH2_PROVIDER = {
-    'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'
-}
+# OAUTH2_PROVIDER = {
+#     'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore',
+#     # 'SCOPES': {'read': 'Read scope', 'write': 'Write scope'},
+#     # 'ACCESS_TOKEN_EXPIRE_SECONDS': 36000,
+#     # 'ALLOWED_GRANT_TYPES': ['password', 'client_credentials'],  # nếu dùng giới hạn
+# }
 
 CKEDITOR_UPLOAD_PATH = "ckeditors/lessons/"
 
@@ -169,5 +172,5 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'findJobApp/static')]  # Thêm thư m
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'rzQj6qN1RnV6PKxcH6rn2am4yx4BdelIomhaYzDZ'
-CLIENT_SECRET = 'pPbHqpbkFXTGNglzOGs8znngjSgsPvd2Q36Ztk9slo0M6DAd72noUHS2D41G2jn0X40P6F3MxDCOE5YbDTh5w7Ia1QsTbE5aDerlNuZ2j2I8hSjTnwvlZYfTfcBFFF2H'
+CLIENT_ID = 'wiRH5HLDtMxK6sVCrJGhtUKk62BL9z7bJUMZxPtZ'
+CLIENT_SECRET = 'I87TMOJIdSB4aIMw3R1TZkVFZOI0aj5VF9gdGyxgZfm2iRMN6DPE8GA5f7iuvXML6j0ObPYw1UvFxVYyp8Y5sP5Q3GRXuxQrlq21D6ZL7qjPdM7306SqWpOw4BMtb287'

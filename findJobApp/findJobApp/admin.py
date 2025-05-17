@@ -5,7 +5,7 @@ from django.utils.safestring import mark_safe
 from django.urls import path
 from django import forms
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
-from findJobApp.models import User, Category, Job, Employer, Candidate, Apply, WorkSchedule, Review, Notification, Verification, Follow, ChatMessage, Admin
+from findJobApp.models import User, Category, Job, Employer, Candidate, Apply, WorkSchedule, Review, Notification, Verification, Follow, ChatMessage
 
 # Form tùy chỉnh để hỗ trợ CKEditor cho trường description
 class JobForm(forms.ModelForm):
@@ -30,7 +30,7 @@ class EmployerAdmin(admin.ModelAdmin):
 
 # Admin cho Job
 class JobAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'employer_id', 'category_id', 'status', 'time_work', 'location', 'salary']
+    list_display = ['id', 'title', 'employer_id', 'category_id', 'status', 'work_hours', 'location', 'salary']
     search_fields = ['title', 'location', 'category_id__name']
     list_filter = ['status', 'employer_id', 'category_id']
     form = JobForm
@@ -82,11 +82,6 @@ class FollowAdmin(admin.ModelAdmin):
     search_fields = ['employer_id__name', 'candidate_id__user__username']
     list_filter = ['notify_email']
 
-# Admin cho Admin
-class AdminAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user']
-    search_fields = ['user__username']
-
 # Admin cho Candidate
 class CandidateAdmin(admin.ModelAdmin):
     list_display = ['id', 'user', 'cv_link']
@@ -94,7 +89,7 @@ class CandidateAdmin(admin.ModelAdmin):
 
 # Admin cho User
 class UserAdmin(admin.ModelAdmin):
-    list_display = ['id', 'username', 'email', 'email_notification', 'average_rating']
+    list_display = ['id', 'username', 'email', 'email_notification', 'average_rating','role']
     search_fields = ['username', 'email']
     list_filter = ['email_notification']
 
@@ -136,4 +131,3 @@ admin_site.register(Notification, NotificationAdmin)
 admin_site.register(Verification, VerificationAdmin)
 admin_site.register(Follow, FollowAdmin)
 admin_site.register(ChatMessage, ChatMessageAdmin)
-admin_site.register(Admin, AdminAdmin)
