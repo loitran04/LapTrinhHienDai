@@ -62,7 +62,6 @@ class Employer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employer_profile')
     name = models.CharField(max_length=255)
     tax_code = models.CharField(max_length=50)
-    images = models.CharField(max_length=255, blank=True, null=True)
     verified = models.BooleanField(default=False)
     location = models.CharField(max_length=255)
     coordinates = models.JSONField(null=True, blank=True)
