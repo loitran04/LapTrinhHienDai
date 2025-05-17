@@ -1,5 +1,3 @@
-from django.db.models.functions import Trunc
-from keras.src.optimizers.schedules.learning_rate_schedule import serialize
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import viewsets, generics, status, permissions
@@ -95,7 +93,7 @@ class JobViewSet(viewsets.ModelViewSet):
         for f in followers:
             send_mail(
                 subject='New Job Posted',
-                message=f'Employer {employer.name} has posted a new job: {job.title}',
+                message=f'Employer {employer.name} has posted a new job: {Job.title}',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[f.candidate.user.email],
                 fail_silently=True,
