@@ -22,3 +22,6 @@ class IsEmployerOwner(permissions.BasePermission):
 class IsCandidateOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj.candidate.user == request.user
+class IsAdminUser(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'admin'
