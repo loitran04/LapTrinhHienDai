@@ -1,12 +1,19 @@
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework import viewsets, generics, status, permissions
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
+from datetime import datetime
 from django.core.mail import send_mail
 from django.conf import settings
-from sqlalchemy import True_, False_
-
-from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, Follow
-from findJobApp.serializers import UserSerializer, EmployerSerializer, JobSerializer, ApplySerializer, WorkScheduleSerializer, ChatMessageSerializer, NotificationSerializer, CandidateSerializer,EmployerRegisterSerializer,CandidateRegisterSerializer, CategorySerializer
+from rest_framework import status as http_status
+from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, Follow, Review, Verification
+from findJobApp.serializers import (UserSerializer, EmployerSerializer, JobSerializer, ApplySerializer,
+                                    WorkScheduleSerializer, ChatMessageSerializer, NotificationSerializer, CandidateSerializer,EmployerRegisterSerializer,CandidateRegisterSerializer,
+                                    CategorySerializer, ReviewSerializer, VerificationSerializer)
 from django.http import JsonResponse
 import json
 from .perms import IsAdminOrOwner, IsEmployerOwner
@@ -87,13 +94,17 @@ class JobViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]  # Giữ kiểm tra login, cho phép đọc mà không cần đăng nhập
 
     def perform_create(self, serializer):
-        employer = Employer.objects.get(user=self.request.user)
-        serializer.save(employer_id=employer)
+        employer = self.request.user.employer
+
+        if not employer.verified:
+            raise PermissionDenied("Tai khoan chua xac thuc!")
+
         followers = Follow.objects.filter(employer=employer)
+        job = serializer.save(employer_id=employer)
         for f in followers:
             send_mail(
                 subject='New Job Posted',
-                message=f'Employer {employer.name} has posted a new job: {Job.title}',
+                message=f'Employer {employer.name} has posted a new job: {job.title}',
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[f.candidate.user.email],
                 fail_silently=True,
@@ -118,7 +129,7 @@ class JobViewSet(viewsets.ModelViewSet):
         job = self.get_object()
         return Response(EmployerSerializer(job.employer_id).data, status=status.HTTP_200_OK)
 
-    @action(methods=['get'], url_path='map-data', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])  # Có thể đọc mà không cần đăng nhập
+    @action(methods=['get'], url_path='map-data', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def get_job_map_data(self, request, pk):
         job = self.get_object()
         if job.coordinates:
@@ -205,12 +216,23 @@ class WorkScheduleViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]  # Chỉ người dùng đã đăng nhập
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)  # Cần điều chỉnh logic, xem ghi chú bên dưới
+        serializer.save(user=self.request.user)
+
+    @action(methods=['post'], detail=True, url_path='mark-completed')
+    def mark_completed(self, request, pk=None):
+        schedule = self.get_object()
+        if schedule.job.employer.user == request.user and schedule.status == 'scheduled':
+            schedule.status='completed'
+            schedule.job.status = 'closed'
+        schedule.save()
+        schedule.job.save()
+        return Response({"detail": "Lịch làm việc đã được đánh dấu là hoàn thành."},status =http_status.HTTP_200_OK)
+
 
 class ChatMessageViewSet(viewsets.ModelViewSet):
     queryset = ChatMessage.objects.all()
     serializer_class = ChatMessageSerializer
-    permission_classes = [permissions.IsAuthenticated]  # Chỉ người dùng đã đăng nhập
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(sender=self.request.user)
@@ -218,10 +240,77 @@ class ChatMessageViewSet(viewsets.ModelViewSet):
 class NotificationViewSet(viewsets.ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]  # Chỉ người dùng đã đăng nhập
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         if not self.request.user.is_authenticated:
             return self.queryset.none()
 
         return self.queryset.filter(user=self.request.user)
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = self.queryset
+        reviewee = self.request.query_params.get('reviewee')
+        if reviewee:
+            queryset = queryset.filter(reviewee=reviewee)
+        job = self.request.query_params.get('job')
+        if job:
+            queryset = queryset.filter(job=job)
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(reviewer=self.request.user)
+@api_view(['GET'])
+def stats_summary(request):
+    from_date = request.GET.get('from', '2025-01-01')
+    to_date = request.GET.get('to', '2025-12-31')
+
+    from_date = timezone.make_aware(datetime.strptime(from_date, '%Y-%m-%d'))
+    to_date = timezone.make_aware(datetime.strptime(to_date, '%Y-%m-%d'))
+
+    jobs = Job.objects.filter(created_at__range=(from_date, to_date))\
+                .annotate(month=TruncMonth('created_at'))\
+                .values('month')\
+                .annotate(total=Count('id'))
+
+    candidates = Candidate.objects.filter(user__date_joined__range=(from_date, to_date))\
+                .annotate(month=TruncMonth('user__date_joined'))\
+                .values('month')\
+                .annotate(total=Count('id'))
+
+    employers = Employer.objects.filter(user__date_joined__range=(from_date, to_date))\
+                .annotate(month=TruncMonth('user__date_joined'))\
+                .values('month')\
+                .annotate(total=Count('id'))
+
+    def convert(data):
+        return {item['month'].strftime('%Y-%m'): item['total'] for item in data}
+
+    return Response({
+        "jobs_created": convert(jobs),
+        "candidates_registered": convert(candidates),
+        "employers_registered": convert(employers),
+    })
+
+
+class VerificationViewSet(viewsets.ModelViewSet):
+    queryset = Verification.objects.all()
+    serializer_class = VerificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        try:
+            employer = Employer.objects.get(user=self.request.user)
+        except Employer.DoesNotExist:
+            raise PermissionDenied("Chỉ nhà tuyển dụng mới được xác minh.")
+
+        serializer.save(employer=employer)
+
+    def update(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or request.user.role != 'admin':
+            raise PermissionDenied("Chi admin duoc quyen phe duyet!")
+        return super().update(request, *args, **kwargs)

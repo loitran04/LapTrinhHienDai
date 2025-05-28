@@ -72,7 +72,7 @@ class ReviewAdmin(admin.ModelAdmin):
 
 # Admin cho Verification
 class VerificationAdmin(admin.ModelAdmin):
-    list_display = ['id', 'employer_id', 'document_link', 'verified_at']
+    list_display = ['id', 'employer_id', 'document', 'verified_at']
     search_fields = ['employer_id__name']
     list_filter = ['verified_at']
 

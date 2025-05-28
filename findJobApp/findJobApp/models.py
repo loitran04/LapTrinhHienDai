@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -35,6 +36,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=20,choices=ROLE_CHOICES,default='candidate')
 
 
+
 # Mô hình Category
 class Category(models.Model):
     name = models.CharField(max_length=255)
@@ -52,6 +54,7 @@ class Job(models.Model):
     coordinates = models.JSONField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=STATUS_JOB_CHOICES, default='draft')
     work_hours = models.IntegerField()
+    created_at = models.DateTimeField(default=timezone.now)
     employer_id = models.ForeignKey('Employer', on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='jobs')
     def __str__(self):
@@ -65,6 +68,7 @@ class Employer(models.Model):
     verified = models.BooleanField(default=False)
     location = models.CharField(max_length=255)
     coordinates = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.name
@@ -77,6 +81,7 @@ class Candidate(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='candidate_profile')
     name = models.CharField(max_length=255)
     cv_link = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
 
     def __str__(self):
@@ -99,11 +104,15 @@ class WorkSchedule(models.Model):
 
 # Mô hình Review
 class Review(models.Model):
-    reviewer_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviewer')
-    reviewee_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviewee')
+    reviewer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviewer')
+    reviewee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reviewee')
+    job = models.ForeignKey(Job, on_delete=models.CASCADE)
     rating = models.IntegerField()
     comment = models.TextField()
-    job_id = models.ForeignKey(Job, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('reviewer', 'reviewee', 'job')  # tránh đánh giá trùng cho 1 job
 
 # Mô hình Notification
 class Notification(models.Model):
@@ -114,9 +123,13 @@ class Notification(models.Model):
 
 # Mô hình Verification
 class Verification(models.Model):
-    employer_id = models.ForeignKey(Employer, on_delete=models.CASCADE)
-    document_link = models.CharField(max_length=255)
+    employer = models.ForeignKey(Employer, on_delete=models.CASCADE)
+    document = models.FileField(upload_to='verifications/')
     verified_at = models.DateTimeField(null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Verification for {self.employer.name}"
 
 # Mô hình Follow
 class Follow(models.Model):
