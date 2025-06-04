@@ -105,12 +105,12 @@ class JobViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]  # Giữ kiểm tra login, cho phép đọc mà không cần đăng nhập
 
     def perform_create(self, serializer):
-        employer = self.request.user.employer
+        employer = self.request.user.employer_profile
 
         if not employer.verified:
             raise PermissionDenied("Tai khoan chua xac thuc!")
 
-        followers = Follow.objects.filter(employer=employer)
+        followers = Follow.objects.filter(employer_id=employer)
         job = serializer.save(employer_id=employer)
         for f in followers:
             send_mail(

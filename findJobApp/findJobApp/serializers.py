@@ -314,8 +314,6 @@ class JobSerializer(ModelSerializer):
         if not salary:
             raise serializers.ValidationError({"salary": "Lương không được để trống."})
             # ✅ Kiểm tra định dạng tiền tệ Việt Nam (ví dụ: 1.000, 10.000.000)
-        if not re.fullmatch(r'^\d{1,3}(\.\d{3})*$', salary):
-            raise serializers.ValidationError({"salary": "Lương phải có định dạng hợp lệ, ví dụ: 1.000 hoặc 100.000"})
         if not attrs.get("location", "").strip():
             raise serializers.ValidationError({"location": "Địa điểm không được để trống."})
         return attrs
