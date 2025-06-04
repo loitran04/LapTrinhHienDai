@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.db.models import Count
+from django.utils.html import mark_safe
 from django.template.response import TemplateResponse
 from django.utils.safestring import mark_safe
 from django.urls import path
@@ -24,8 +25,9 @@ class EmployerAdmin(admin.ModelAdmin):
 
     @staticmethod
     def image_view(employer):
-        if employer.images:
-            return mark_safe(f"<img src='{employer.images}' width='200' />")
+        first_image = employer.images.first()
+        if first_image and first_image.image:
+            return mark_safe(f"<img src='{first_image.image.url}' width='200' />")
         return "No Image"
 
 # Admin cho Job

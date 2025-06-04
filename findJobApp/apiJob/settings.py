@@ -66,11 +66,12 @@ CKEDITOR_UPLOAD_PATH = "ckeditors/lessons/"
 # Cloudinary Configuration (for storing images like avatars)
 import cloudinary
 import cloudinary.uploader
+from cloudinary.utils import cloudinary_url
 
 cloudinary.config(
-    cloud_name="dxxwcby8l",
-    api_key="448651448423589",
-    api_secret="ftGud0r1TTqp0CGp5tjwNmkAm-A",
+    cloud_name="dssuwnld0",
+    api_key="743895311332295",
+    api_secret="5uqvxXOtmavK80vM8Gr4CSDCoWQ",  # Click 'View API Keys' above to copy your API secret
     secure=True
 )
 
@@ -174,5 +175,5 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'findJobApp/static')]  # Thêm thư m
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CLIENT_ID = 'wiRH5HLDtMxK6sVCrJGhtUKk62BL9z7bJUMZxPtZ'
-CLIENT_SECRET = 'I87TMOJIdSB4aIMw3R1TZkVFZOI0aj5VF9gdGyxgZfm2iRMN6DPE8GA5f7iuvXML6j0ObPYw1UvFxVYyp8Y5sP5Q3GRXuxQrlq21D6ZL7qjPdM7306SqWpOw4BMtb287'
+CLIENT_ID = 'WU87d41uPtibO0TL84OfN9LgrlS2n9FVzZD4ZRE2'
+CLIENT_SECRET = '20eRBRjgVdXygOyfTwlO4y36ADkYFCyL1NMf4mkmhzHB1Ccl6Kvy6IcveozpFLaxxStK446wII8Rk1A6zAThqIYfLF8PqpvololbVPlngkzCoV0AtJODPWXkmnmKZDUK'

@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from cloudinary.models import CloudinaryField
 
 # Định nghĩa các lựa chọn cho enum
 STATUS_APP_CHOICES = [
@@ -30,7 +31,7 @@ ROLE_CHOICES = [
 
 # Mô hình User (kế thừa từ AbstractUser)
 class User(AbstractUser):
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = CloudinaryField()
     email_notification = models.BooleanField(default=True)
     average_rating = models.FloatField(default=0.0)
     role = models.CharField(max_length=20,choices=ROLE_CHOICES,default='candidate')
@@ -52,7 +53,7 @@ class Job(models.Model):
     salary = models.CharField(max_length=50)
     location = models.CharField(max_length=255)
     coordinates = models.JSONField(null=True, blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_JOB_CHOICES, default='draft')
+    status = models.CharField(max_length=10, choices=STATUS_JOB_CHOICES, default='active')
     work_hours = models.IntegerField()
     created_at = models.DateTimeField(default=timezone.now)
     employer_id = models.ForeignKey('Employer', on_delete=models.CASCADE)
@@ -64,6 +65,7 @@ class Job(models.Model):
 class Employer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employer_profile')
     name = models.CharField(max_length=255)
+    avatar = CloudinaryField()
     tax_code = models.CharField(max_length=50)
     verified = models.BooleanField(default=False)
     location = models.CharField(max_length=255)
@@ -74,12 +76,13 @@ class Employer(models.Model):
         return self.name
 class EmployerImage(models.Model):
     employer = models.ForeignKey(Employer, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='employer_images/')
+    image = CloudinaryField()
     uploaded_at= models.DateTimeField(auto_now_add=True)
 # Mô hình Candidate
 class Candidate(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='candidate_profile')
     name = models.CharField(max_length=255)
+    avatar = CloudinaryField()
     cv_link = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 

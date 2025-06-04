@@ -8,17 +8,26 @@ import json
 
 class UserSerializer(ModelSerializer):
     avatar = serializers.ImageField(required=False)
+    # role = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'email_notification', 'average_rating', 'password']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'email_notification', 'average_rating', 'password','role']
         extra_kwargs = {
             'password': {'write_only': True}
         }
 
+    # def get_role(self, user):
+    #     if hasattr(user, 'employer_profile'):
+    #         return 'employer'
+    #     elif hasattr(user, 'candidate_profile'):
+    #         return 'candidate'
+    #     elif hasattr(user, 'admin'):
+    #         return 'admin'
+    #     return 'unknown'
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if instance.avatar:
-            data['avatar'] = instance.avatar
+        data['avatar'] = instance.avatar.url if instance.avatar else ''
         return data
 
 
@@ -34,40 +43,77 @@ class EmployerImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = EmployerImage
         fields = ['id', 'image']
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['image'] = instance.image.url if instance.image else ''
+        return data
 
 
 class EmployerSerializer(ModelSerializer):
     images = EmployerImageSerializer(many=True, read_only=True)
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(), write_only=True, required=False
+    )
+    avatar = serializers.ImageField(required=False, allow_null=True)
+
     class Meta:
         model = Employer
-        fields = ['id', 'user', 'name', 'tax_code', 'images', 'verified', 'location', 'coordinates']
+        fields = [
+            'id', 'user', 'name', 'avatar', 'tax_code', 'images',
+            'uploaded_images', 'verified', 'location', 'coordinates'
+        ]
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if instance.images:
-            data['images'] = instance.images
+        # Xóa phần gán lại images vì đã được xử lý tự động bởi EmployerImageSerializer
+        # if instance.images:
+        #     data['images'] = instance.images  # Dòng này gây lỗi, hãy xóa nó
+
+        # Xử lý coordinates
         if instance.coordinates:
             data['coordinates'] = json.loads(instance.coordinates) if isinstance(instance.coordinates, str) else instance.coordinates
+        data['avatar'] = instance.avatar.url if instance.avatar else ''
         return data
-    # def create(self, validated_data):
-    #     tax_code = validated_data.pop('tax_code')
-    #     location = validated_data.pop('location')
-    #     user = User.objects.create_user(**validated_data, role='employer')
-    #     Employer.objects.create(user=user, name=user.username, tax_code=tax_code, location=location)
-    #     return user
+
+    def create(self, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        avatar = validated_data.pop('avatar', None)
+        employer = Employer.objects.create(**validated_data, avatar=avatar)
+        for image in uploaded_images:
+            EmployerImage.objects.create(employer=employer, image=image)
+        return employer
+
+    def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        # Nếu muốn cập nhật ảnh mới mà không xóa ảnh cũ
+        for image in uploaded_images:
+            EmployerImage.objects.create(employer=instance, image=image)
+
+        return instance
 class EmployerRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField()
+    avatar = serializers.ImageField(required=False, allow_null=True)
+    images = serializers.ListField(
+        child=serializers.ImageField(), write_only=True, required=False
+    )
+
 
     class Meta:
         model = Employer
-        fields = ['username', 'password', 'email', 'tax_code']
+        fields = ['username', 'password','name', 'email', 'tax_code', 'avatar', 'images']
 
     def validate(self, attrs):
         username = attrs.get('username', '')
         password = attrs.get('password', '')
         email = attrs.get('email', '')
+        avatar = attrs.get('avatar', None)
+        images = attrs.get('images', [])
 
         # --- Username ---
         if ' ' in username:
@@ -92,6 +138,13 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
         # --- Email ---
         if User.objects.filter(email=email).exists():
             raise serializers.ValidationError({"email": "Email này đã được sử dụng."})
+        # --- Avatar ---
+        if not avatar:
+            raise serializers.ValidationError({"avatar": "Bạn phải cung cấp avatar."})
+
+        # --- Images ---
+        if not images or len(images) < 3:
+            raise serializers.ValidationError({"images": "Bạn phải cung cấp ít nhất 3 ảnh công ty."})
 
         return attrs
 
@@ -99,16 +152,26 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
         username = validated_data.pop('username')
         password = validated_data.pop('password')
         email = validated_data.pop('email')
+        avatar = validated_data.pop('avatar', None)
+        images = validated_data.pop('images', [])
 
         user = User.objects.create_user(
             username=username,
             password=password,
             email=email,
-            role='employer'
+            role='employer',
+            avatar=avatar
         )
-        employer = Employer.objects.create(user=user, **validated_data)
-        return user
+        employer = Employer.objects.create(user=user, avatar=avatar, **validated_data)
+        # Tạo EmployerImage nếu có danh sách ảnh
+        for img in images:
+            EmployerImage.objects.create(employer=employer, image=img)
+        return employer
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['avatar'] = instance.avatar.url if instance.avatar else ''
+        return data
 
 
 class CandidateSerializer(ModelSerializer):
@@ -135,7 +198,7 @@ class CandidateRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Candidate
-        fields = ['username', 'password', 'email', 'cv_link']
+        fields = ['username', 'password','name', 'email', 'cv_link']
 
     def validate(self, attrs):
         username = attrs.get('username', '')
@@ -184,6 +247,10 @@ class CandidateRegisterSerializer(serializers.ModelSerializer):
         )
         candidate = Candidate.objects.create(user=user, **validated_data)
         return user
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['avatar'] = instance.avatar.url if instance.avatar else ''
+        return data
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -306,6 +373,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class VerificationSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Verification
         fields = ['id', 'employer', 'document', 'verified_at', 'is_verified']

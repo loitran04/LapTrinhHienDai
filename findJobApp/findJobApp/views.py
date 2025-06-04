@@ -38,11 +38,12 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             return Response(UserSerializer(u).data)
         return Response(UserSerializer(request.user).data)
 
-    @action(methods=['post'],detail=False, url_path='register-employer',permission_classes=[permissions.AllowAny])
+    @action(methods=['post'], detail=False, url_path='register-employer', permission_classes=[permissions.AllowAny])
     def register_employer(self, request):
         serializer = EmployerRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user= serializer.save()
+        employer = serializer.save()  # Lưu và lấy đối tượng Employer
+        user = employer.user  # Lấy đối tượng User liên kết
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
     @action(methods=['post'], detail=False, url_path='register-candidate', permission_classes=[permissions.AllowAny])
@@ -76,7 +77,7 @@ class EmployerViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    @action(methods=['get'], url_path='map-data', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])  # Có thể đọc mà không cần đăng nhập
+    @action(methods=['get'], url_path='map-data', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def get_map_data(self, request, pk):
         employer = self.get_object()
         if employer.coordinates:
@@ -110,8 +111,8 @@ class JobViewSet(viewsets.ModelViewSet):
                 fail_silently=True,
             )
 
-    def get_queryset(self): # tìm kiếm theo tên và vị trí và ngành nghề
-        query = self.queryset
+    def get_queryset(self):
+        query = Job.objects.all()  # <-- lấy toàn bộ dữ liệu gốc
         if self.action == 'list':
             q = self.request.query_params.get('q')
             if q:
@@ -122,7 +123,14 @@ class JobViewSet(viewsets.ModelViewSet):
             category_id = self.request.query_params.get('category_id')
             if category_id:
                 query = query.filter(category_id=category_id)
+            salary = self.request.query_params.get('salary')
+            if salary:
+                query = query.filter(salary__icontains=salary)
+            work_hours = self.request.query_params.get('work_hours')
+            if work_hours:
+                query = query.filter(work_hours=work_hours)
         return query
+
 
     @action(methods=['get'], url_path='employer', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])  # Có thể đọc mà không cần đăng nhập
     def get_employer(self, request, pk):
@@ -185,9 +193,9 @@ class ApplyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if hasattr(user, 'candidate'):
-            return Apply.objects.filer(candidate__user= user)
+            return Apply.objects.filter(candidate__user= user)
         elif hasattr(user, 'employer'):
-            return Apply.objects.filer(job__employer_id__user=user)
+            return Apply.objects.filter(job__employer_id__user=user)
         return Apply.objects.none()
 
     @action(detail=True, methods=['patch'], url_path='approve')
@@ -206,7 +214,7 @@ class ApplyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='job/(?P<job_id>[^/.]+)')
     def job_applies(self, request, job_id=None):
-        applies =Apply.objects.filer(job__id = job_id, job__employer_id__user=request.user)
+        applies =Apply.objects.filter(job__id = job_id, job__employer_id__user=request.user)
         serializer=self.get_serializer(applies, many=True)
         return Response(serializer.data)
 
