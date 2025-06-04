@@ -169,9 +169,18 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
         return employer
 
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['avatar'] = instance.avatar.url if instance.avatar else ''
-        return data
+        user = instance.user
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "name": instance.name,  # ✅ trả về tên công ty
+            "avatar": instance.avatar.url if instance.avatar else '',
+            "email_notification": user.email_notification,
+            "average_rating": user.average_rating,
+            "role": user.role,
+            "tax_code": instance.tax_code
+        }
 
 
 class CandidateSerializer(ModelSerializer):
@@ -195,10 +204,12 @@ class CandidateRegisterSerializer(serializers.ModelSerializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
     email = serializers.EmailField()
+    avatar = serializers.ImageField(required=True)  # phải có để lưu avatar
+    name = serializers.CharField(required=True)
 
     class Meta:
         model = Candidate
-        fields = ['username', 'password','name', 'email', 'cv_link']
+        fields = ['username', 'password','name', 'email', 'cv_link','avatar']
 
     def validate(self, attrs):
         username = attrs.get('username', '')
@@ -238,19 +249,42 @@ class CandidateRegisterSerializer(serializers.ModelSerializer):
         username = validated_data.pop('username')
         password = validated_data.pop('password')
         email = validated_data.pop('email')
+        name = validated_data.pop('name')
+        avatar = validated_data.get('avatar')
+        cv_link = validated_data.pop('cv_link')
 
         user = User.objects.create_user(
             username=username,
             password=password,
             email=email,
-            role='candidate'
+            role='candidate',
+            avatar = avatar
         )
-        candidate = Candidate.objects.create(user=user, **validated_data)
+        Candidate.objects.create(user=user, name=name, avatar=avatar, cv_link=cv_link)
         return user
+
     def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['avatar'] = instance.avatar.url if instance.avatar else ''
-        return data
+        try:
+            candidate = Candidate.objects.get(user=instance)
+            avatar = candidate.avatar.url if candidate.avatar else ''
+            name = candidate.name
+            cv_link = candidate.cv_link
+        except Candidate.DoesNotExist:
+            avatar = ''
+            name = ''
+            cv_link = ''
+
+        return {
+            'id': instance.id,
+            'username': instance.username,
+            'email': instance.email,
+            'name': name,
+            'avatar': avatar,
+            'email_notification': instance.email_notification,
+            'average_rating': instance.average_rating,
+            'role': instance.role,
+            'cv_link': cv_link
+        }
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

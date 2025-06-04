@@ -82,7 +82,7 @@ class EmployerImage(models.Model):
 class Candidate(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='candidate_profile')
     name = models.CharField(max_length=255)
-    avatar = CloudinaryField()
+    avatar = CloudinaryField('avatar', null=True, blank=True)
     cv_link = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
 

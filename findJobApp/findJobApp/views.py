@@ -44,14 +44,14 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         employer = serializer.save()  # Lưu và lấy đối tượng Employer
         user = employer.user  # Lấy đối tượng User liên kết
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.to_representation(employer), status=status.HTTP_201_CREATED)
 
     @action(methods=['post'], detail=False, url_path='register-candidate', permission_classes=[permissions.AllowAny])
     def register_candidate(self, request):
         serializer = CandidateRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.to_representation(user), status=status.HTTP_201_CREATED)
 
     @action(methods=['post'], url_path='send-email', detail=False, permission_classes=[permissions.IsAuthenticated])  # Chỉ người dùng đã đăng nhập
     def send_email_notification(self, request):

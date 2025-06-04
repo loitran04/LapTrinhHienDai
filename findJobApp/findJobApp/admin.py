@@ -7,6 +7,7 @@ from django.urls import path
 from django import forms
 from ckeditor_uploader.widgets import CKEditorUploadingWidget
 from findJobApp.models import User, Category, Job, Employer, Candidate, Apply, WorkSchedule, Review, Notification, Verification, Follow, ChatMessage
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 # Form tùy chỉnh để hỗ trợ CKEditor cho trường description
 class JobForm(forms.ModelForm):
@@ -93,6 +94,24 @@ class CandidateAdmin(admin.ModelAdmin):
     search_fields = ['user__username']
 
 # Admin cho User
+class CustomUserAdmin(BaseUserAdmin):
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        ('Thông tin cá nhân', {'fields': ('email', 'avatar', 'email_notification', 'average_rating', 'role')}),
+        ('Quyền truy cập', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Thời gian', {'fields': ('last_login', 'date_joined')}),
+    )
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'password1', 'password2', 'email', 'avatar', 'role'),
+        }),
+    )
+    list_display = ('username', 'email', 'role', 'is_staff')
+    search_fields = ('username', 'email')
+    ordering = ('username',)
+
+admin.site.register(User, CustomUserAdmin)
 class UserAdmin(admin.ModelAdmin):
     list_display = ['id', 'username', 'email', 'email_notification', 'average_rating','role']
     search_fields = ['username', 'email']
