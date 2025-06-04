@@ -98,6 +98,9 @@ class Apply(models.Model):
     candidate_id = models.ForeignKey(Candidate, on_delete=models.CASCADE)
     cv_link = models.URLField()
 
+    class Meta:
+        unique_together = ('job_id', 'candidate_id')
+
 # Mô hình WorkSchedule
 class WorkSchedule(models.Model):
     start_time = models.DateTimeField()

@@ -213,9 +213,9 @@ class ApplyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'candidate'):
+        if hasattr(user, 'candidate_profile'):
             return Apply.objects.filter(candidate__user= user)
-        elif hasattr(user, 'employer'):
+        elif hasattr(user, 'employer_profile'):
             return Apply.objects.filter(job__employer_id__user=user)
         return Apply.objects.none()
 

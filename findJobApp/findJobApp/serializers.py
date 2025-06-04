@@ -336,6 +336,17 @@ class ApplySerializer(serializers.ModelSerializer):
         if obj.candidate_id:
             return UserSerializer(obj.candidate_id.user).data
         return None
+    def validate(self, attrs):
+        requests = self.context.get('request')
+        candidate = requests.user.candidate_profile
+
+        job = attrs.get('job_id')
+        if Apply.objects.filter(job_id=job, candidate_id=candidate).exists():
+            raise serializers.ValidationError("Ban da ung tuyen roi!")
+        return attrs
+    def create(self, validated_data):
+        candidate = self.context['request'].user.candidate_profile
+        return Apply.objects.create(candidate_id=candidate, **validated_data)
 
 class WorkScheduleSerializer(ModelSerializer):
     class Meta:
