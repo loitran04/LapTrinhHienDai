@@ -10,14 +10,15 @@ from datetime import datetime
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework import status as http_status
-from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, Follow, Review, Verification
+from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, Follow, Review, Verification, Follow
 from findJobApp.serializers import (UserSerializer, EmployerSerializer, JobSerializer, ApplySerializer,
                                     WorkScheduleSerializer, ChatMessageSerializer, NotificationSerializer, CandidateSerializer,EmployerRegisterSerializer,CandidateRegisterSerializer,
-                                    CategorySerializer, ReviewSerializer, VerificationSerializer)
+                                    CategorySerializer, ReviewSerializer, VerificationSerializer, FollowSerializer)
 from django.http import JsonResponse
 import json
 from .perms import IsAdminOrOwner, IsEmployerOwner
-
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from dj_rest_auth.registration.views import SocialLoginView
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
@@ -99,6 +100,7 @@ class EmployerViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
 
         serializer = self.get_serializer(employer)
         return Response(serializer.data)
+
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
@@ -235,8 +237,10 @@ class ApplyViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='job/(?P<job_id>[^/.]+)')
     def job_applies(self, request, job_id=None):
-        applies =Apply.objects.filter(job__id = job_id, job__employer_id__user=request.user)
-        serializer=self.get_serializer(applies, many=True)
+        user = request.user
+        employer = user.employer_profile
+        applies = Apply.objects.filter(job_id__id=job_id, job_id__employer_id=employer)
+        serializer = self.get_serializer(applies, many=True)
         return Response(serializer.data)
 
 class WorkScheduleViewSet(viewsets.ModelViewSet):
@@ -343,3 +347,39 @@ class VerificationViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated or request.user.role != 'admin':
             raise PermissionDenied("Chi admin duoc quyen phe duyet!")
         return super().update(request, *args, **kwargs)
+
+class GoogleLogin(SocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+class FollowViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def list(self, request):
+        candidate = request.user.candidate_profile
+        follows = Follow.objects.filter(candidate_id=candidate)
+        serializer = FollowSerializer(follows, many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        candidate = request.user.candidate_profile
+        employer_id = request.data.get('employer_id')
+
+        try:
+            employer = Employer.objects.get(id=employer_id)
+        except Employer.DoesNotExist:
+            return Response({'error': 'Employer không tồn tại'}, status=status.HTTP_400_BAD_REQUEST)
+
+        follow, created = Follow.objects.get_or_create(candidate_id=candidate, employer_id=employer)
+        if not created:
+            return Response({'message': 'Đã theo dõi rồi'}, status=status.HTTP_200_OK)
+
+        return Response(FollowSerializer(follow).data, status=status.HTTP_201_CREATED)
+
+    @action(methods=['delete'], detail=False)
+    def unfollow(self, request):
+        candidate = request.user.candidate_profile
+        employer_id = request.query_params.get('employer_id')
+
+        deleted, _ = Follow.objects.filter(candidate_id=candidate, employer_id_id=employer_id).delete()
+        if deleted:
+            return Response({'message': 'Đã bỏ theo dõi'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'message': 'Không tìm thấy'}, status=status.HTTP_400_BAD_REQUEST)

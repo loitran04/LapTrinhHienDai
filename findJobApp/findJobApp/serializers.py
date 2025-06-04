@@ -3,7 +3,7 @@ from rest_framework.exceptions import PermissionDenied
 import re
 import emoji
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
-from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, EmployerImage, Review, Verification
+from findJobApp.models import User, Employer, Job, Apply, WorkSchedule, ChatMessage, Notification, Candidate, Category, EmployerImage, Review, Verification, Follow
 import json
 
 class UserSerializer(ModelSerializer):
@@ -347,7 +347,11 @@ class ApplySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         candidate = self.context['request'].user.candidate_profile
         return Apply.objects.create(candidate_id=candidate, **validated_data)
-
+class FollowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Follow
+        fields = ['id', 'employer_id', 'followed_at']
+        read_only_fields = ['id', 'followed_at']
 class WorkScheduleSerializer(ModelSerializer):
     class Meta:
         model = WorkSchedule

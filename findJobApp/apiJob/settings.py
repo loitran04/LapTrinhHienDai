@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 
 from django.conf.global_settings import EMAIL_HOST_USER
 
@@ -25,7 +28,7 @@ MEDIA_URL = '/media/'
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)6&0idepvr1ofg(-y&7y@4o6)7eq!%m$_nu&n)39viptn_*s%s'
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -48,6 +51,15 @@ INSTALLED_APPS = [
     'drf_yasg',
     'oauth2_provider',
     'corsheaders',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'dj_rest_auth',
+    'dj_rest_auth.registration',
+    'rest_framework.authtoken',
+
 ]
 
 REST_FRAMEWORK = {
@@ -70,22 +82,24 @@ from cloudinary.utils import cloudinary_url
 
 cloudinary.config(
     cloud_name="dssuwnld0",
-    api_key="743895311332295",
-    api_secret="5uqvxXOtmavK80vM8Gr4CSDCoWQ",  # Click 'View API Keys' above to copy your API secret
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
     secure=True
 )
+
 
 # Email Configuration (for sending notifications)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'shopnro247combot@gmail.com'
-EMAIL_HOST_PASSWORD = 'ilku tthj tfat icjg'
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+
 # Google Maps API Key (for tracking work locations)
-GOOGLE_MAPS_API_KEY = 'AIzaSyA8kPXTpPl1Q5CL2e5zcXQpaRl3bTNF2xM'
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
 # Firebase Configuration (for chat integration)
 FIREBASE_CONFIG = {
@@ -107,6 +121,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'apiJob.urls'
@@ -136,7 +151,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'findjobdb',
         'USER': 'root',
-        'PASSWORD': 'Admin@123',
+        'PASSWORD': os.getenv("DB_PASSWORD"),
         'HOST': ''  # Mặc định localhost
     }
 }
@@ -170,10 +185,31 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'findJobApp/static')]  # Thêm thư mục static
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'findJobApp/static')]
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# login gg, facebook
+SITE_ID = 1
 
-CLIENT_ID = 'WU87d41uPtibO0TL84OfN9LgrlS2n9FVzZD4ZRE2'
-CLIENT_SECRET = '20eRBRjgVdXygOyfTwlO4y36ADkYFCyL1NMf4mkmhzHB1Ccl6Kvy6IcveozpFLaxxStK446wII8Rk1A6zAThqIYfLF8PqpvololbVPlngkzCoV0AtJODPWXkmnmKZDUK'
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username'
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        }
+    }
+}
+
+
