@@ -106,7 +106,7 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Employer
-        fields = ['username', 'password','name', 'email', 'tax_code', 'avatar', 'images']
+        fields = ['username', 'password','name', 'email', 'tax_code', 'avatar', 'images', 'location']
 
     def validate(self, attrs):
         username = attrs.get('username', '')
@@ -114,6 +114,7 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
         email = attrs.get('email', '')
         avatar = attrs.get('avatar', None)
         images = attrs.get('images', [])
+        location = attrs.get('location', '').strip()
 
         # --- Username ---
         if ' ' in username:
@@ -145,6 +146,8 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
         # --- Images ---
         if not images or len(images) < 3:
             raise serializers.ValidationError({"images": "Bạn phải cung cấp ít nhất 3 ảnh công ty."})
+        if not location:
+            raise serializers.ValidationError({"location": "Bạn phải nhập địa chỉ công ty."})
 
         return attrs
 
@@ -179,7 +182,8 @@ class EmployerRegisterSerializer(serializers.ModelSerializer):
             "email_notification": user.email_notification,
             "average_rating": user.average_rating,
             "role": user.role,
-            "tax_code": instance.tax_code
+            "tax_code": instance.tax_code,
+            "location": instance.location  # ✅ Thêm dòng này
         }
 
 
