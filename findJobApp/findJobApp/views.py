@@ -89,6 +89,16 @@ class EmployerViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
             }, status=status.HTTP_200_OK)
         return Response({"message": "No map data available"}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(methods=['get'], detail=False, url_path='current-employer')
+    def current_employer(self, request):
+        user = request.user
+        try:
+            employer = user.employer_profile  # related_name='employer_profile'
+        except Employer.DoesNotExist:
+            return Response({"detail": "User is not an employer."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(employer)
+        return Response(serializer.data)
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
@@ -113,6 +123,7 @@ class JobViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         query = Job.objects.all()  # <-- lấy toàn bộ dữ liệu gốc
+        print(">> SQL:", query.query)
         if self.action == 'list':
             q = self.request.query_params.get('q')
             if q:
@@ -175,6 +186,16 @@ class CandidateViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+    @action(methods=['get'], detail=False, url_path='current-candidate')
+    def current_candidate(self, request):
+        user = request.user
+        try:
+            candidate = user.candidate_profile  # related_name='candidate_profile'
+        except Candidate.DoesNotExist:
+            return Response({"detail": "User is not a candidate."}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(candidate)
+        return Response(serializer.data)
 class ApplyViewSet(viewsets.ModelViewSet):
     queryset = Apply.objects.all()
     serializer_class = ApplySerializer

@@ -255,6 +255,10 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id','name']
+def is_valid_currency_format(value):
+    # Ví dụ: 1.000 hoặc 123.456.789
+    pattern = r'^\d{1,3}(\.\d{3})*$'
+    return bool(re.fullmatch(pattern, value))
 class JobSerializer(ModelSerializer):
 
     category_id = serializers.PrimaryKeyRelatedField(
@@ -268,8 +272,12 @@ class JobSerializer(ModelSerializer):
     def validate(self, attrs):
         if attrs.get("work_hours", 0) <= 0:
             raise serializers.ValidationError({"work_hours": "Số giờ làm phải lớn hơn 0."})
-        if not attrs.get("salary", "").strip():
+        salary = attrs.get("salary", "").strip()
+        if not salary:
             raise serializers.ValidationError({"salary": "Lương không được để trống."})
+            # ✅ Kiểm tra định dạng tiền tệ Việt Nam (ví dụ: 1.000, 10.000.000)
+        if not re.fullmatch(r'^\d{1,3}(\.\d{3})*$', salary):
+            raise serializers.ValidationError({"salary": "Lương phải có định dạng hợp lệ, ví dụ: 1.000 hoặc 100.000"})
         if not attrs.get("location", "").strip():
             raise serializers.ValidationError({"location": "Địa điểm không được để trống."})
         return attrs

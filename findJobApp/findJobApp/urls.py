@@ -17,7 +17,6 @@ router.register(r'work-schedules', WorkScheduleViewSet, basename='work-schedule'
 router.register(r'chat-messages', ChatMessageViewSet, basename='chat-message')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register('reviews', ReviewViewSet, basename='reviews')
-
 urlpatterns = [
     path('', include(router.urls)),
     path('stats/summary/', stats_summary),
