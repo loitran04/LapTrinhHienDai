@@ -4,7 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 from findJobApp.models import Candidate
 from findJobApp.views import (UserViewSet, EmployerViewSet, JobViewSet, ApplyViewSet, WorkScheduleViewSet,
-                              ChatMessageViewSet, NotificationViewSet, CandidateViewSet, CategoryViewSet, ReviewViewSet, stats_summary, GoogleLogin, FollowViewSet)
+                              ChatMessageViewSet, NotificationViewSet, CandidateViewSet, CategoryViewSet, ReviewViewSet, stats_summary, GoogleLogin, FollowViewSet, VerificationViewSet)
 
 # Cấu hình router cho các ViewSet
 router = DefaultRouter()
@@ -19,6 +19,7 @@ router.register(r'chat-messages', ChatMessageViewSet, basename='chat-message')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register('reviews', ReviewViewSet, basename='reviews')
 router.register(r'follow', FollowViewSet, basename='follow')
+router.register(r'verifications', VerificationViewSet, basename='verifications')
 urlpatterns = [
     path('', include(router.urls)),
     path('stats/summary/', stats_summary),

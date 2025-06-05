@@ -119,7 +119,7 @@ class JobViewSet(viewsets.ModelViewSet):
                 subject='New Job Posted',
                 message=f'Employer {employer.name} has posted a new job: {job.title}',
                 from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[f.candidate.user.email],
+                recipient_list=[f.candidate_id.user.email],
                 fail_silently=True,
             )
 
@@ -127,6 +127,7 @@ class JobViewSet(viewsets.ModelViewSet):
         query = Job.objects.all()  # <-- lấy toàn bộ dữ liệu gốc
         print(">> SQL:", query.query)
         if self.action == 'list':
+
             q = self.request.query_params.get('q')
             if q:
                 query = query.filter(title__icontains=q)
@@ -173,7 +174,6 @@ class JobViewSet(viewsets.ModelViewSet):
         )
         return Response({'message': 'email sent successfully'})
 
-
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
@@ -216,9 +216,9 @@ class ApplyViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if hasattr(user, 'candidate_profile'):
-            return Apply.objects.filter(candidate__user= user)
+            return Apply.objects.filter(candidate_id=user.candidate_profile)
         elif hasattr(user, 'employer_profile'):
-            return Apply.objects.filter(job__employer_id__user=user)
+            return Apply.objects.filter(job_id__employer_id__user=user)
         return Apply.objects.none()
 
     @action(detail=True, methods=['patch'], url_path='approve')
@@ -345,8 +345,25 @@ class VerificationViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         if not request.user.is_authenticated or request.user.role != 'admin':
-            raise PermissionDenied("Chi admin duoc quyen phe duyet!")
-        return super().update(request, *args, **kwargs)
+            raise PermissionDenied("Chỉ admin được quyền xét duyệt.")
+
+        instance = self.get_object()
+        is_verified = request.data.get("is_verified", False)
+
+        if is_verified:
+            instance.is_verified = True
+            instance.verified_at = timezone.now()
+            instance.save()
+            instance.employer.verified = True
+            instance.employer.save()
+
+        return Response(self.get_serializer(instance).data)
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_superuser:
+            return Verification.objects.filter(is_verified=False)
+        return Verification.objects.none()
 
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter

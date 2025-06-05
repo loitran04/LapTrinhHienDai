@@ -302,10 +302,11 @@ class JobSerializer(ModelSerializer):
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), source='category',write_only=True
     )
+    employer_id = serializers.IntegerField(source='employer_id.id', read_only=True)
     category = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = Job
-        fields = ['id', 'title', 'description', 'skills', 'salary', 'location', 'coordinates', 'status', 'work_hours', 'category','category_id']
+        fields = ['id', 'title', 'description', 'skills', 'salary', 'location', 'coordinates', 'status', 'work_hours', 'category','category_id', 'employer_id']
 
     def validate(self, attrs):
         if attrs.get("work_hours", 0) <= 0:
@@ -346,6 +347,7 @@ class ApplySerializer(serializers.ModelSerializer):
         return attrs
     def create(self, validated_data):
         candidate = self.context['request'].user.candidate_profile
+        validated_data.pop('candidate_id', None)
         return Apply.objects.create(candidate_id=candidate, **validated_data)
 class FollowSerializer(serializers.ModelSerializer):
     class Meta:
@@ -432,8 +434,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 class VerificationSerializer(serializers.ModelSerializer):
+    employer_images = serializers.SerializerMethodField()
 
     class Meta:
         model = Verification
-        fields = ['id', 'employer', 'document', 'verified_at', 'is_verified']
+        fields = ['id', 'employer', 'document', 'verified_at', 'is_verified', 'employer_images']
         read_only_fields = ['verified_at', 'is_verified', 'employer']
+
+    def get_employer_images(self, obj):
+        return [img.image.url for img in obj.employer.images.all()]

@@ -151,7 +151,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'findjobdb',
         'USER': 'root',
-        'PASSWORD': os.getenv("DB_PASSWORD"),
+        'PASSWORD': 'Admin@123',
         'HOST': ''  # Mặc định localhost
     }
 }
