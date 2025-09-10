@@ -24,7 +24,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     queryset = User.objects.filter(is_active=True)
     serializer_class = UserSerializer
     permission_classes = [IsAdminOrOwner]
-    @action(methods=['get', 'patch'], url_path='current-user', detail=False, permission_classes=[permissions.IsAuthenticated])  # Chỉ người dùng đã đăng nhập
+    @action(methods=['get', 'patch'], url_path='current-user', detail=False, permission_classes=[permissions.IsAuthenticated])
     def get_current_user(self, request):
         if request.method == "PATCH":
             u = request.user
@@ -43,8 +43,8 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def register_employer(self, request):
         serializer = EmployerRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        employer = serializer.save()  # Lưu và lấy đối tượng Employer
-        user = employer.user  # Lấy đối tượng User liên kết
+        employer = serializer.save()
+        user = employer.user
         return Response(serializer.to_representation(employer), status=status.HTTP_201_CREATED)
 
     @action(methods=['post'], detail=False, url_path='register-candidate', permission_classes=[permissions.AllowAny])
@@ -54,7 +54,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
         user = serializer.save()
         return Response(serializer.to_representation(user), status=status.HTTP_201_CREATED)
 
-    @action(methods=['post'], url_path='send-email', detail=False, permission_classes=[permissions.IsAuthenticated])  # Chỉ người dùng đã đăng nhập
+    @action(methods=['post'], url_path='send-email', detail=False, permission_classes=[permissions.IsAuthenticated])
     def send_email_notification(self, request):
         user = request.user
         if user.email_notification:
@@ -72,8 +72,8 @@ class EmployerViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
     serializer_class = EmployerSerializer
     def get_permissions(self):
         if self.action in ['list']:
-            return [permissions.IsAdminUser()]  # Chỉ cho admin hoặc superuser xem all employer
-        return [permissions.IsAuthenticatedOrReadOnly()]  # Các action khác giữ nguyên
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticatedOrReadOnly()]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -104,7 +104,7 @@ class EmployerViewSet(viewsets.ModelViewSet,generics.CreateAPIView):
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]  # Giữ kiểm tra login, cho phép đọc mà không cần đăng nhập
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
         employer = self.request.user.employer_profile
@@ -124,7 +124,7 @@ class JobViewSet(viewsets.ModelViewSet):
             )
 
     def get_queryset(self):
-        query = Job.objects.all()  # <-- lấy toàn bộ dữ liệu gốc
+        query = Job.objects.all()
         print(">> SQL:", query.query)
         if self.action == 'list':
 
@@ -146,7 +146,7 @@ class JobViewSet(viewsets.ModelViewSet):
         return query
 
 
-    @action(methods=['get'], url_path='employer', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])  # Có thể đọc mà không cần đăng nhập
+    @action(methods=['get'], url_path='employer', detail=True, permission_classes=[permissions.IsAuthenticatedOrReadOnly])
     def get_employer(self, request, pk):
         job = self.get_object()
         return Response(EmployerSerializer(job.employer_id).data, status=status.HTTP_200_OK)
@@ -246,7 +246,7 @@ class ApplyViewSet(viewsets.ModelViewSet):
 class WorkScheduleViewSet(viewsets.ModelViewSet):
     queryset = WorkSchedule.objects.all()
     serializer_class = WorkScheduleSerializer
-    permission_classes = [permissions.IsAuthenticated]  # Chỉ người dùng đã đăng nhập
+    permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

@@ -8,7 +8,6 @@ import json
 
 class UserSerializer(ModelSerializer):
     avatar = serializers.ImageField(required=False)
-    # role = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'avatar', 'email_notification', 'average_rating', 'password','role']
@@ -16,28 +15,10 @@ class UserSerializer(ModelSerializer):
             'password': {'write_only': True}
         }
 
-    # def get_role(self, user):
-    #     if hasattr(user, 'employer_profile'):
-    #         return 'employer'
-    #     elif hasattr(user, 'candidate_profile'):
-    #         return 'candidate'
-    #     elif hasattr(user, 'admin'):
-    #         return 'admin'
-    #     return 'unknown'
-
     def to_representation(self, instance):
         data = super().to_representation(instance)
         data['avatar'] = instance.avatar.url if instance.avatar else ''
         return data
-
-
-    # def create(self, validated_data):
-    #     data = validated_data.copy()
-    #     u = User(**data)
-    #     u.set_password(data.get('password'))
-    #     u.save()
-    #     return u
-
 
 class EmployerImageSerializer(serializers.ModelSerializer):
     class Meta:
@@ -65,11 +46,7 @@ class EmployerSerializer(ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Xóa phần gán lại images vì đã được xử lý tự động bởi EmployerImageSerializer
-        # if instance.images:
-        #     data['images'] = instance.images  # Dòng này gây lỗi, hãy xóa nó
 
-        # Xử lý coordinates
         if instance.coordinates:
             data['coordinates'] = json.loads(instance.coordinates) if isinstance(instance.coordinates, str) else instance.coordinates
         data['avatar'] = instance.avatar.url if instance.avatar else ''
@@ -89,7 +66,6 @@ class EmployerSerializer(ModelSerializer):
             setattr(instance, attr, value)
         instance.save()
 
-        # Nếu muốn cập nhật ảnh mới mà không xóa ảnh cũ
         for image in uploaded_images:
             EmployerImage.objects.create(employer=instance, image=image)
 
@@ -294,7 +270,6 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ['id','name']
 def is_valid_currency_format(value):
-    # Ví dụ: 1.000 hoặc 123.456.789
     pattern = r'^\d{1,3}(\.\d{3})*$'
     return bool(re.fullmatch(pattern, value))
 class JobSerializer(ModelSerializer):
@@ -314,7 +289,6 @@ class JobSerializer(ModelSerializer):
         salary = attrs.get("salary", "").strip()
         if not salary:
             raise serializers.ValidationError({"salary": "Lương không được để trống."})
-            # ✅ Kiểm tra định dạng tiền tệ Việt Nam (ví dụ: 1.000, 10.000.000)
         if not attrs.get("location", "").strip():
             raise serializers.ValidationError({"location": "Địa điểm không được để trống."})
         return attrs
@@ -385,7 +359,6 @@ class NotificationSerializer(ModelSerializer):
         return data
 def contains_dangerous_tags(text):
     """
-    Kiểm tra xem văn bản có chứa các thẻ HTML nguy hiểm (XSS) hay không.
     """
     return bool(re.search(r'<\s*(script|iframe|embed|object|link|style)[^>]*>', text, re.IGNORECASE))
 
@@ -396,29 +369,28 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ['reviewer', 'created_at']
 
     def validate(self, attrs):
-        reviewer = self.context['request'].user  # reviewer luôn là người gửi request
+        reviewer = self.context['request'].user
         reviewee = attrs.get('reviewee')
         job = attrs.get('job')
         rating = attrs.get('rating')
         comment = attrs.get('comment', '').strip()
 
-        # Công việc phải ở trạng thái 'completed'
+
         if job.status != 'completed':
             raise serializers.ValidationError({"job": "Công việc chưa hoàn thành."})
 
-        # Không được tự đánh giá bản thân
+
         if reviewer == reviewee:
             raise serializers.ValidationError({"reviewee": "Không thể tự đánh giá chính mình."})
 
-        # Không được đánh giá trùng
+
         if Review.objects.filter(reviewer=reviewer, reviewee=reviewee, job=job).exists():
             raise serializers.ValidationError("Bạn đã đánh giá người này cho công việc này rồi.")
 
-        # Validate rating
+
         if not (1 <= rating <= 5):
             raise serializers.ValidationError({"rating": "Đánh giá phải từ 1 đến 5 sao."})
 
-        # Validate comment
         if not comment:
             raise serializers.ValidationError({"comment": "Bình luận không được để trống."})
         if len(comment) > 1000:
